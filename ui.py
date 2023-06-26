@@ -33,9 +33,40 @@ class OpticutUI(ttk.Frame):
         lbl_min_drop_length = ttk.Label(frame_min_drop_length, text="Longueur de chute minimale:")
         lbl_min_drop_length.pack(side="left")
 
-        entry_min_drop_length = ttk.Entry(frame_min_drop_length)
-        entry_min_drop_length.insert(100, "100")
-        entry_min_drop_length.pack(side="left")
+        self.entry_min_drop_length = ttk.Entry(frame_min_drop_length)
+        self.entry_min_drop_length.insert(0, "0")
+        self.entry_min_drop_length.pack(side="left")
+        self.entry_min_drop_length.bind("<Return>", lambda event: self.accept_min_drop_length())  # Accepter la valeur saisie si l'utilisateur appuie sur la touche Entrée
+
+        self.min_error_message = ttk.Label(self)
+        self.min_error_message.pack()
+
+        self.btn_accept_min_drop_length = ttk.Button(frame_min_drop_length, text="Accepter", command=self.accept_min_drop_length)
+        self.btn_accept_min_drop_length.pack(side="left", padx=5)
+
+        self.btn_modify_min_drop_length = ttk.Button(frame_min_drop_length, text="Modifier", state="disabled", command=self.modify_min_drop_length)
+        self.btn_modify_min_drop_length.pack(side="left", padx=5)
+
+    def accept_min_drop_length(self):
+        min_drop_length = self.entry_min_drop_length.get()
+
+        # Vérification que la valeur n'est pas vide et est un entier
+        if min_drop_length.isdigit():
+            self.min_drop_length = int(min_drop_length)
+            self.entry_min_drop_length.configure(state="disabled")  # Griser l'entrée
+            self.btn_accept_min_drop_length.configure(state="disabled")  # Désactiver le bouton "Accepter"
+            self.btn_modify_min_drop_length.configure(state="normal")  # Activer le bouton "Modifier"
+            print(self.min_drop_length)
+        else:
+            # Afficher un message d'erreur
+            self.min_error_message.configure(text="Veuillez saisir une valeur entière valide pour la longueur de chute minimale.")
+
+    def modify_min_drop_length(self):
+        self.entry_min_drop_length.configure(state="normal")  # Réactiver l'entrée
+        self.btn_accept_min_drop_length.configure(state="normal")  # Activer le bouton "Accepter"
+        self.btn_modify_min_drop_length.configure(state="disabled")  # Désactiver le bouton "Modifier"
+
+
 
     def create_bar_lengths(self):
         frame_bar_lengths = ttk.Frame(self)
