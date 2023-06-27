@@ -101,12 +101,18 @@ class OpticutUI(ttk.Frame):
         bar_length = self.entry_bar_lengths.get()
 
         # Vérification que la valeur n'est pas vide et est un entier
-        if bar_length.isdigit():
+        if bar_length.isdigit() and int(bar_length) != 0:
             self.bar_lengths.append(int(bar_length))
+
+            # Definir l'état de la fenêtre de texte comme 'normal' pour pouvoir ajouter du texte
+            self.bar_lengths_window.config(state='normal')
             self.bar_lengths_window.insert(tk.END, f"{bar_length}\n")
+
+            # Une fois que vous avez ajouté le texte, remettez l'état de la fenêtre de texte sur 'disabled' pour empêcher la saisie
+            self.bar_lengths_window.config(state='disabled')
         else:
             # Afficher un message d'erreur
-            self.bar_error_message.configure(text="Veuillez saisir une valeur entière valide.")
+            self.bar_error_message.configure(text="Veuillez saisir une valeur entière valide et supérieur a zéro.")
 
         self.entry_bar_lengths.delete(0, tk.END)  # Effacer le champ de saisie après ajout
         print(self.bar_lengths)
@@ -114,7 +120,13 @@ class OpticutUI(ttk.Frame):
     def delete_last_bar_length(self):
         if self.bar_lengths:
             self.bar_lengths.pop()
+
+            # Définir l'état de la fenêtre de texte comme 'normal' pour pouvoir supprimer du texte
+            self.bar_lengths_window.config(state='normal')
             self.bar_lengths_window.delete("end-2l", "end-1l")
+
+            # Une fois que vous avez supprimé le texte, remettez l'état de la fenêtre de texte sur 'disabled' pour empêcher la saisie
+            self.bar_lengths_window.config(state='disabled')
             print(self.bar_lengths)
 
 
@@ -150,35 +162,58 @@ class OpticutUI(ttk.Frame):
         cut_length = self.entry_cut_lengths.get()
 
         # Vérification que la valeur n'est pas vide et est un entier
-        if cut_length.isdigit():
+        if cut_length.isdigit() and int(cut_length) != 0:
             self.cut_lengths.append(int(cut_length))
+
+            # Définir l'état de la fenêtre de texte comme 'normal' pour pouvoir ajouter du texte
+            self.cut_lengths_window.config(state='normal')
             self.cut_lengths_window.insert(tk.END, f"{cut_length}\n")
+
+            # Une fois que vous avez ajouté le texte, remettez l'état de la fenêtre de texte sur 'disabled' pour empêcher la saisie
+            self.cut_lengths_window.config(state='disabled')
         else:
             # Afficher un message d'erreur
-            self.cut_error_message.configure(text="Veuillez saisir une valeur entière valide.")
+            self.cut_error_message.configure(text="Veuillez saisir une valeur entière valide et supérieur a zéro.")
 
         self.entry_cut_lengths.delete(0, tk.END)
         print(self.cut_lengths)
 
+
     def delete_last_cut_length(self):
         if self.cut_lengths:
             self.cut_lengths.pop()
-            self.cut_lengths_window.delete("end-2l", "end-1l")
-            print(self.cut_lengths)
 
+            # Définir l'état de la fenêtre de texte comme 'normal' pour pouvoir supprimer du texte
+            self.cut_lengths_window.config(state='normal')
+            self.cut_lengths_window.delete("end-2l", "end-1l")
+
+            # Une fois que vous avez supprimé le texte, remettez l'état de la fenêtre de texte sur 'disabled' pour empêcher la saisie
+            self.cut_lengths_window.config(state='disabled')
+
+            print(self.cut_lengths)
 
 
     def create_optimize_button(self):
         btn_optimize = ttk.Button(self, text="Optimiser")
         btn_optimize.pack(pady=10)
 
-        def disable_entries():
-            for child in self.winfo_children():
-                if isinstance(child, ttk.Entry) or isinstance(child, ttk.Button):
-                    child.configure(state="disabled")
-            btn_optimize.configure(state="disabled")
+        def print_result():
+            # création d'une nouvelle fenêtre
+            new_window = tk.Toplevel(self)
 
-        btn_optimize.configure(command=disable_entries)
+            # création de labels pour afficher les valeurs des variables
+            label_bar_lengths = tk.Label(new_window, text=f"Bar Lengths: {self.bar_lengths}")
+            label_cut_lengths = tk.Label(new_window, text=f"Cut Lengths: {self.cut_lengths}")
+            label_min_drop_length = tk.Label(new_window, text=f"Min Drop Length: {self.min_drop_length}")
+
+            # affichage des labels dans la nouvelle fenêtre
+            label_bar_lengths.pack()
+            label_cut_lengths.pack()
+            label_min_drop_length.pack()
+
+        btn_optimize.configure(command=print_result)
+
+
 
     def run(self):
         self.pack()
