@@ -1,10 +1,17 @@
 
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
+
 
 class OpticutUI(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
+
+        # Initialize attributes
+        self.min_drop_length = None
+        self.bar_lengths = []
+        self.cut_lengths = []
 
         self.style = ttk.Style()
         self.style.configure("TLabel", font=("Helvetica", 12), padding=10)
@@ -192,24 +199,30 @@ class OpticutUI(ttk.Frame):
 
             print(self.cut_lengths)
 
-
     def create_optimize_button(self):
         btn_optimize = ttk.Button(self, text="Optimiser")
         btn_optimize.pack(pady=10)
 
         def print_result():
-            # création d'une nouvelle fenêtre
-            new_window = tk.Toplevel(self)
+            # vérifie si toutes les valeurs ne sont pas vides
+            if self.bar_lengths and self.cut_lengths and self.min_drop_length is not None:
+                # création d'une nouvelle fenêtre
+                new_window = tk.Toplevel(self)
 
-            # création de labels pour afficher les valeurs des variables
-            label_bar_lengths = tk.Label(new_window, text=f"Bar Lengths: {self.bar_lengths}")
-            label_cut_lengths = tk.Label(new_window, text=f"Cut Lengths: {self.cut_lengths}")
-            label_min_drop_length = tk.Label(new_window, text=f"Min Drop Length: {self.min_drop_length}")
+                # création de labels pour afficher les valeurs des variables
+                label_bar_lengths = tk.Label(new_window, text=f"Bar Lengths: {self.bar_lengths}")
+                label_bar_lengths.pack()
 
-            # affichage des labels dans la nouvelle fenêtre
-            label_bar_lengths.pack()
-            label_cut_lengths.pack()
-            label_min_drop_length.pack()
+                label_cut_lengths = tk.Label(new_window, text=f"Cut Lengths: {self.cut_lengths}")
+                label_cut_lengths.pack()
+
+                label_min_drop_length = tk.Label(new_window, text=f"Min Drop Length: {self.min_drop_length}")
+                label_min_drop_length.pack()
+
+            else:
+                # affiche un message d'erreur si une ou plusieurs valeurs sont vides
+                messagebox.showerror("Erreur", "Veuillez remplir tout les champs.")
+
 
         btn_optimize.configure(command=print_result)
 
