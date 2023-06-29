@@ -206,12 +206,29 @@ class OpticutUI(ttk.Frame):
         def print_result():
             # vérifie si toutes les valeurs ne sont pas vides
             if self.bar_lengths and self.cut_lengths and self.min_drop_length is not None:
+                 # vérifie si la liste des longueurs de coupe est vide
+                if not self.cut_lengths:
+                    messagebox.showinfo("Info", "Aucune coupe nécessaire, toutes les barres sont non utilisées.")
+                    return
+
+                # vérifie si la plus grande longueur de coupe est supérieure à la plus grande longueur de barre
+                if max(self.cut_lengths) > max(self.bar_lengths):
+                    messagebox.showerror("Erreur", "Aucune barre ne peut contenir la plus grande coupe demandée.")
+                    return
+                
+                 # vérifie si la somme de toutes les longueurs de coupe est supérieure à la somme de toutes les longueurs de barre en tenant compte des chutes minimales
+                total_bar_length = sum(self.bar_lengths) - len(self.bar_lengths) * self.min_drop_length
+                if sum(self.cut_lengths) > total_bar_length:
+                    messagebox.showerror("Erreur", "Il n'y a pas assez de barres pour toutes les coupes demandées en tenant compte des chutes minimales.")
+                    return
+
                 # création d'une nouvelle fenêtre
                 new_window = tk.Toplevel(self)
 
                 # appelle la fonction d'optimisation avec les valeurs actuelles
                 cutting_plans = optimize_cutting(self.bar_lengths, self.cut_lengths, self.min_drop_length)
 
+                # Parce qu'il n'y a qu'un seul élément dans cutting_plans, on peut utiliser items pour obtenir directement le nom de l'algorithme et les résultats
                 for plan, results in cutting_plans.items():
                     # affiche le nom de l'algorithme
                     label_plan = tk.Label(new_window, text=plan)

@@ -130,10 +130,26 @@ def next_fit(bar_lengths, cut_lengths, min_drop_length):
 
 
 def optimize_cutting(bar_lengths, cut_lengths, min_drop_length):
+    # Exécute les trois algorithmes et stocke leurs résultats
     result_ff = first_fit(bar_lengths, cut_lengths, min_drop_length)
-    print("Resultat",result_ff)
     result_bf = best_fit(bar_lengths, cut_lengths, min_drop_length)
-    print("Resultat",result_bf)
     result_nf = next_fit(bar_lengths, cut_lengths, min_drop_length)
 
-    return {"First-Fit": result_ff, "Best-Fit": result_bf, "Next-Fit": result_nf}
+    # Stocke les résultats dans un dictionnaire
+    results = {"First-Fit": result_ff, "Best-Fit": result_bf, "Next-Fit": result_nf}
+
+    # Étape 1 : Trouve l'algorithme qui utilise le moins de barres
+    min_bars = min(len(results[algo]) for algo in results)
+    best_algos = [algo for algo in results if len(results[algo]) == min_bars]
+
+    # S'il y a un seul meilleur algorithme, renvoie son résultat
+    if len(best_algos) == 1:
+        return {best_algos[0]: results[best_algos[0]]}
+
+    # Étape 2 : Parmi les algorithmes restants, trouve celui qui laisse la plus grande chute individuelle
+    max_remainder = max(max(bar["remainder"] for bar in results[algo]) for algo in best_algos)
+    best_algo = [algo for algo in best_algos if max(bar["remainder"] for bar in results[algo]) == max_remainder][0]
+
+    # Renvoie le meilleur résultat
+    return {best_algo: results[best_algo]}
+
