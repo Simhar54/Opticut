@@ -2,6 +2,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from optimization import optimize_cutting
 
 
 class OpticutUI(ttk.Frame):
@@ -63,7 +64,7 @@ class OpticutUI(ttk.Frame):
             self.entry_min_drop_length.configure(state="disabled")  # Griser l'entrée
             self.btn_accept_min_drop_length.configure(state="disabled")  # Désactiver le bouton "Accepter"
             self.btn_modify_min_drop_length.configure(state="normal")  # Activer le bouton "Modifier"
-            print(self.min_drop_length)
+
         else:
             # Afficher un message d'erreur
             self.min_error_message.configure(text="Veuillez saisir une valeur entière valide pour la longueur de chute minimale.")
@@ -122,7 +123,7 @@ class OpticutUI(ttk.Frame):
             self.bar_error_message.configure(text="Veuillez saisir une valeur entière valide et supérieur a zéro.")
 
         self.entry_bar_lengths.delete(0, tk.END)  # Effacer le champ de saisie après ajout
-        print(self.bar_lengths)
+
 
     def delete_last_bar_length(self):
         if self.bar_lengths:
@@ -134,7 +135,6 @@ class OpticutUI(ttk.Frame):
 
             # Une fois que vous avez supprimé le texte, remettez l'état de la fenêtre de texte sur 'disabled' pour empêcher la saisie
             self.bar_lengths_window.config(state='disabled')
-            print(self.bar_lengths)
 
 
     def create_cut_lengths(self):
@@ -183,7 +183,7 @@ class OpticutUI(ttk.Frame):
             self.cut_error_message.configure(text="Veuillez saisir une valeur entière valide et supérieur a zéro.")
 
         self.entry_cut_lengths.delete(0, tk.END)
-        print(self.cut_lengths)
+ 
 
 
     def delete_last_cut_length(self):
@@ -197,7 +197,7 @@ class OpticutUI(ttk.Frame):
             # Une fois que vous avez supprimé le texte, remettez l'état de la fenêtre de texte sur 'disabled' pour empêcher la saisie
             self.cut_lengths_window.config(state='disabled')
 
-            print(self.cut_lengths)
+ 
 
     def create_optimize_button(self):
         btn_optimize = ttk.Button(self, text="Optimiser")
@@ -209,22 +209,34 @@ class OpticutUI(ttk.Frame):
                 # création d'une nouvelle fenêtre
                 new_window = tk.Toplevel(self)
 
-                # création de labels pour afficher les valeurs des variables
-                label_bar_lengths = tk.Label(new_window, text=f"Bar Lengths: {self.bar_lengths}")
-                label_bar_lengths.pack()
+                # appelle la fonction d'optimisation avec les valeurs actuelles
+                cutting_plans = optimize_cutting(self.bar_lengths, self.cut_lengths, self.min_drop_length)
 
-                label_cut_lengths = tk.Label(new_window, text=f"Cut Lengths: {self.cut_lengths}")
-                label_cut_lengths.pack()
+                for plan, results in cutting_plans.items():
+                    # affiche le nom de l'algorithme
+                    label_plan = tk.Label(new_window, text=plan)
+                    label_plan.pack()
 
-                label_min_drop_length = tk.Label(new_window, text=f"Min Drop Length: {self.min_drop_length}")
-                label_min_drop_length.pack()
+                    # Pour chaque résultat (qui est un dictionnaire)
+                    for i, result in enumerate(results):
+                        # affiche le numéro de la barre et sa longueur
+                        label_bar = tk.Label(new_window, text=f"Barre {i+1} (longueur {result['length']}) :")
+                        label_bar.pack()
+
+                        # affiche les découpes
+                        label_cuts = tk.Label(new_window, text="Coupes : " + ", ".join(str(cut) for cut in result["cuts"]))
+                        label_cuts.pack()
+
+                        # affiche le reste
+                        label_remainder = tk.Label(new_window, text="Reste : " + str(result["remainder"]))
+                        label_remainder.pack()
 
             else:
                 # affiche un message d'erreur si une ou plusieurs valeurs sont vides
-                messagebox.showerror("Erreur", "Veuillez remplir tout les champs.")
-
+                messagebox.showerror("Erreur", "Veuillez remplir tous les champs.")
 
         btn_optimize.configure(command=print_result)
+
 
 
 
