@@ -29,10 +29,35 @@ class OpticutUI(ttk.Frame):
     def create_menu(self):
         menu_bar = tk.Menu(self.master)
         file_menu = tk.Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label="Reset")
+        file_menu.add_command(label="Reset", command=self.reset)
         file_menu.add_command(label="Quitter", command=self.master.quit)
         menu_bar.add_cascade(label="Menu", menu=file_menu)
         self.master.config(menu=menu_bar)
+
+    def reset(self):
+        self.min_drop_length = None
+        self.bar_lengths = []
+        self.cut_lengths = []
+
+        # efface les valeurs saisies
+        self.entry_min_drop_length.configure(state="normal")
+        self.entry_min_drop_length.delete(0, 'end')
+        self.entry_min_drop_length.insert(0, "0")
+
+        self.bar_lengths_window.config(state='normal')
+        self.bar_lengths_window.delete('1.0', 'end')
+
+        self.entry_bar_lengths.delete(0, 'end')
+        self.entry_bar_lengths.insert(0, "0")
+
+        self.cut_lengths_window.config(state='normal')
+        self.cut_lengths_window.delete('1.0', 'end')
+
+        self.entry_cut_lengths.delete(0, 'end')
+        self.entry_cut_lengths.insert(0, "0")
+
+        print("essaie", self.min_drop_length, self.bar_lengths, self.cut_lengths)
+
 
     def create_min_drop_length(self):
         frame_min_drop_length = ttk.Frame(self)
@@ -202,59 +227,88 @@ class OpticutUI(ttk.Frame):
     def create_optimize_button(self):
         btn_optimize = ttk.Button(self, text="Optimiser")
         btn_optimize.pack(pady=10)
+        btn_optimize.configure(command=self.print_result)
 
-        def print_result():
-            # vérifie si toutes les valeurs ne sont pas vides
-            if self.bar_lengths and self.cut_lengths and self.min_drop_length is not None:
-                 # vérifie si la liste des longueurs de coupe est vide
-                if not self.cut_lengths:
-                    messagebox.showinfo("Info", "Aucune coupe nécessaire, toutes les barres sont non utilisées.")
-                    return
+    def print_result(self):
+        # vérifie si toutes les valeurs ne sont pas vides
+        if self.validate_inputs():
+            # création d'une nouvelle fenêtre
+            new_window = self.create_new_window()
 
-                # vérifie si la plus grande longueur de coupe est supérieure à la plus grande longueur de barre
-                if max(self.cut_lengths) > max(self.bar_lengths):
-                    messagebox.showerror("Erreur", "Aucune barre ne peut contenir la plus grande coupe demandée.")
-                    return
-                
-                 # vérifie si la somme de toutes les longueurs de coupe est supérieure à la somme de toutes les longueurs de barre en tenant compte des chutes minimales
-                total_bar_length = sum(self.bar_lengths) - len(self.bar_lengths) * self.min_drop_length
-                if sum(self.cut_lengths) > total_bar_length:
-                    messagebox.showerror("Erreur", "Il n'y a pas assez de barres pour toutes les coupes demandées en tenant compte des chutes minimales.")
-                    return
+            # appelle la fonction d'optimisation avec les valeurs actuelles
+            cutting_plans = optimize_cutting(self.bar_lengths, self.cut_lengths, self.min_drop_length)
 
-                # création d'une nouvelle fenêtre
-                new_window = tk.Toplevel(self)
+            self.display_results(new_window, cutting_plans)
 
-                # appelle la fonction d'optimisation avec les valeurs actuelles
-                cutting_plans = optimize_cutting(self.bar_lengths, self.cut_lengths, self.min_drop_length)
+    def validate_inputs(self):
+        if self.bar_lengths and self.cut_lengths is not None and self.min_drop_length is not None:
+            # vérifie si la liste des longueurs de coupe est vide
+            if not self.cut_lengths:
+                messagebox.showinfo("Info", "Aucune coupe nécessaire, toutes les barres sont non utilisées.")
+                return False
 
-                # Parce qu'il n'y a qu'un seul élément dans cutting_plans, on peut utiliser items pour obtenir directement le nom de l'algorithme et les résultats
-                for plan, results in cutting_plans.items():
-                    # affiche le nom de l'algorithme
-                    label_plan = tk.Label(new_window, text=plan)
-                    label_plan.pack()
+            # vérifie si la plus grande longueur de coupe est supérieure à la plus grande longueur de barre
+            if max(self.cut_lengths) > max(self.bar_lengths):
+                messagebox.showerror("Erreur", "Aucune barre ne peut contenir la plus grande coupe demandée.")
+                return False
 
-                    # Pour chaque résultat (qui est un dictionnaire)
-                    for i, result in enumerate(results):
-                        # affiche le numéro de la barre et sa longueur
-                        label_bar = tk.Label(new_window, text=f"Barre {i+1} (longueur {result['length']}) :")
-                        label_bar.pack()
+            # vérifie si la somme de toutes les longueurs de coupe est supérieure à la somme de toutes les longueurs de barre en tenant compte des chutes minimales
+            total_bar_length = sum(self.bar_lengths) - len(self.bar_lengths) * self.min_drop_length
+            if sum(self.cut_lengths) > total_bar_length:
+                messagebox.showerror("Erreur", "Il n'y a pas assez de barres pour toutes les coupes demandées en tenant compte des chutes minimales.")
+                return False
 
-                        # affiche les découpes
-                        label_cuts = tk.Label(new_window, text="Coupes : " + ", ".join(str(cut) for cut in result["cuts"]))
-                        label_cuts.pack()
+            return True
 
-                        # affiche le reste
-                        label_remainder = tk.Label(new_window, text="Reste : " + str(result["remainder"]))
-                        label_remainder.pack()
+        else:
+            # affiche un message d'erreur si une ou plusieurs valeurs sont vides
+            messagebox.showerror("Erreur", "Veuillez remplir tous les champs.")
+            return False
 
-            else:
-                # affiche un message d'erreur si une ou plusieurs valeurs sont vides
-                messagebox.showerror("Erreur", "Veuillez remplir tous les champs.")
+    def create_new_window(self):
+        new_window = tk.Toplevel(self)
+        new_window.geometry("800x730")
 
-        btn_optimize.configure(command=print_result)
+        # Création du bouton "Imprimer"
+        print_button = ttk.Button(new_window, text="Imprimer", style="TButton")
+        print_button.pack(side=tk.BOTTOM)
+        print_button.pack(pady=(0, 10))
 
+        # création du canevas avec la scrollbar
+        canvas = tk.Canvas(new_window, width=780, height=650)
+        canvas.pack(side=tk.LEFT)
 
+        scrollbar = ttk.Scrollbar(new_window, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side=tk.LEFT, fill='y')
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion = canvas.bbox("all")))
+
+        # création du frame dans le canevas
+        result_frame = tk.Frame(canvas)
+        canvas.create_window((0,0), window=result_frame, anchor="n")
+
+        return result_frame
+
+    def display_results(self, result_frame, cutting_plans):
+        for plan, results in cutting_plans.items():
+    
+            # Pour chaque résultat (qui est un dictionnaire)
+            for i, result in enumerate(results):
+                # affiche le numéro de la barre et sa longueur
+                label_bar = tk.Label(result_frame, text=f"Barre {i+1} longueur {result['length']} :", font=("Helvetica", 12))
+                label_bar.pack(pady=10, padx=(50, 0))  
+
+                # affiche les découpes
+                label_cuts = tk.Label(result_frame, text="Coupes : " + ", ".join(str(cut) for cut in result["cuts"]), font=("Helvetica", 12))
+                label_cuts.pack(pady=10, padx=(200, 0))  
+
+                # affiche le reste
+                label_remainder = tk.Label(result_frame, text="Reste : " + str(result["remainder"]), font=("Helvetica", 12))
+                label_remainder.pack(pady=10, padx=(200, 0)) 
+                # affiche une ligne de séparation
+                separator = ttk.Separator(result_frame, orient="horizontal")
+                separator.pack(fill="x", pady=10, padx=(50, 0)) 
 
 
     def run(self):
