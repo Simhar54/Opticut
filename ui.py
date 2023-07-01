@@ -1,8 +1,12 @@
 
 import tkinter as tk
+import os
+import webbrowser
 from tkinter import ttk
 from tkinter import messagebox
 from optimization import optimize_cutting
+from fpdf import FPDF
+from datetime import datetime
 
 
 class OpticutUI(ttk.Frame):
@@ -56,7 +60,6 @@ class OpticutUI(ttk.Frame):
         self.entry_cut_lengths.delete(0, 'end')
         self.entry_cut_lengths.insert(0, "0")
 
-        print("essaie", self.min_drop_length, self.bar_lengths, self.cut_lengths)
 
 
     def create_min_drop_length(self):
@@ -67,7 +70,7 @@ class OpticutUI(ttk.Frame):
         lbl_min_drop_length.pack(side="left")
 
         self.entry_min_drop_length = ttk.Entry(frame_min_drop_length)
-        self.entry_min_drop_length.insert(0, "0")
+        self.entry_min_drop_length.insert(100, "100")
         self.entry_min_drop_length.pack(side="left")
         self.entry_min_drop_length.bind("<Return>", lambda event: self.accept_min_drop_length())  # Accepter la valeur saisie si l'utilisateur appuie sur la touche Entrée
 
@@ -123,8 +126,21 @@ class OpticutUI(ttk.Frame):
         btn_delete_bar_length = ttk.Button(frame_bar_lengths, text="Effacer la dernière barre", command=self.delete_last_bar_length)
         btn_delete_bar_length.pack(side="left", padx=5)
 
-        self.bar_lengths_window = tk.Text(self, height=10, width=60)
-        self.bar_lengths_window.pack()
+        # création d'un frame pour contenir la text box et la scrollbar
+        frame = tk.Frame(self)
+        frame.pack()
+
+        # création de la scrollbar
+        scrollbar = tk.Scrollbar(frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # création de la text box
+        self.bar_lengths_window = tk.Text(frame, height=10, width=60, yscrollcommand=scrollbar.set)
+        self.bar_lengths_window.pack(side=tk.LEFT, fill=tk.Y)
+
+        # associe la scrollbar à la text box
+        scrollbar.config(command=self.bar_lengths_window.yview)
+
 
          # Initialiser la liste des longueurs des barres à scier
         self.bar_lengths = []
@@ -184,8 +200,20 @@ class OpticutUI(ttk.Frame):
         btn_delete_cut_length = ttk.Button(frame_cut_lengths, text="Effacer la dernière découpe", command=self.delete_last_cut_length)
         btn_delete_cut_length.pack(side="left", padx=5)
 
-        self.cut_lengths_window = tk.Text(self, height=10, width=60)
-        self.cut_lengths_window.pack()
+        # création d'un frame pour contenir la text box et la scrollbar
+        frame = tk.Frame(self)
+        frame.pack()
+
+        # création de la scrollbar
+        scrollbar = tk.Scrollbar(frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # création de la text box
+        self.cut_lengths_window = tk.Text(frame, height=10, width=60, yscrollcommand=scrollbar.set)
+        self.cut_lengths_window.pack(side=tk.LEFT, fill=tk.Y)
+
+        # associe la scrollbar à la text box
+        scrollbar.config(command=self.cut_lengths_window.yview)
 
         # Initialiser la liste des longueurs des découpes
         self.cut_lengths = []
@@ -232,13 +260,65 @@ class OpticutUI(ttk.Frame):
     def print_result(self):
         # vérifie si toutes les valeurs ne sont pas vides
         if self.validate_inputs():
-            # création d'une nouvelle fenêtre
-            new_window = self.create_new_window()
 
             # appelle la fonction d'optimisation avec les valeurs actuelles
             cutting_plans = optimize_cutting(self.bar_lengths, self.cut_lengths, self.min_drop_length)
 
+            # création d'une nouvelle fenêtre
+            new_window = self.create_new_window(cutting_plans)
+
             self.display_results(new_window, cutting_plans)
+
+
+
+    class PDF(FPDF):
+        def header(self):
+            # Select Arial bold 15
+            self.set_font('Arial', 'B', 15)
+            # Move to the right
+            self.cell(80)
+            # Framed title
+            self.cell(30, 10, 'Plan de coupe', 1, 0, 'C')
+            # Line break
+            self.ln(20)
+
+    def export_to_pdf(self, cutting_plans):
+        pdf = FPDF()
+
+        # obtenir la date et l'heure actuelles
+        now = datetime.now()
+        date_time = now.strftime("%Y-%m-%d_%H-%M-%S")
+
+        # pour chaque plan de découpe
+        for plan, results in cutting_plans.items():
+
+            pdf.add_page()
+
+            # Ajoute un titre à chaque page
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt = f"Plan de coupe - {date_time}", ln = True, align = 'C')
+
+            pdf.set_font("Arial", size = 12)
+
+            # Pour chaque résultat (qui est un dictionnaire)
+            for i, result in enumerate(results):
+                # affiche le numéro de la barre et sa longueur
+                pdf.cell(200, 10, txt = f"Barre {i+1} longueur {result['length']} :", ln = True, align = 'C') 
+
+                # affiche les découpes
+                pdf.cell(200, 10, txt = "Coupes : " + ", ".join(str(cut) for cut in result["cuts"]), ln = True, align = 'C')  
+
+                # affiche le reste
+                pdf.cell(200, 10, txt = "Reste : " + str(result["remainder"]), ln = True, align = 'C') 
+
+        # sauvegarder le fichier pdf sur le bureau avec la date et l'heure dans le nom du fichier
+        home = os.path.expanduser("~")
+        filename = os.path.join(home, f"Desktop/plan_de_coupe_{date_time}.pdf")
+        pdf.output(filename)
+
+        # ouvrir le fichier PDF
+        webbrowser.open_new(filename)
+
 
     def validate_inputs(self):
         if self.bar_lengths and self.cut_lengths is not None and self.min_drop_length is not None:
@@ -252,6 +332,11 @@ class OpticutUI(ttk.Frame):
                 messagebox.showerror("Erreur", "Aucune barre ne peut contenir la plus grande coupe demandée.")
                 return False
 
+            # vérifie si la longueur de n'importe quelle barre est inférieure à min_drop_length
+            if min(self.bar_lengths) < self.min_drop_length:
+                messagebox.showerror("Erreur", "Une ou plusieurs barres sont plus courtes que la longueur de chute minimale.")
+                return False
+
             # vérifie si la somme de toutes les longueurs de coupe est supérieure à la somme de toutes les longueurs de barre en tenant compte des chutes minimales
             total_bar_length = sum(self.bar_lengths) - len(self.bar_lengths) * self.min_drop_length
             if sum(self.cut_lengths) > total_bar_length:
@@ -260,19 +345,39 @@ class OpticutUI(ttk.Frame):
 
             return True
 
+
         else:
             # affiche un message d'erreur si une ou plusieurs valeurs sont vides
             messagebox.showerror("Erreur", "Veuillez remplir tous les champs.")
             return False
 
-    def create_new_window(self):
+    def create_new_window(self, cutting_plans):
         new_window = tk.Toplevel(self)
-        new_window.geometry("800x730")
+        
+        # Récupère la largeur et la hauteur de l'écran
+        screen_width = new_window.winfo_screenwidth()
+        screen_height = new_window.winfo_screenheight()
 
-        # Création du bouton "Imprimer"
-        print_button = ttk.Button(new_window, text="Imprimer", style="TButton")
+        # Définit la largeur et la hauteur de la fenêtre
+        window_width = 800
+        window_height = 730
+
+        # Calcule la position pour centrer la fenêtre
+        position_top = 0
+        position_right = int(screen_width/2 - window_width/2)
+
+        # Positionne et dimensionne la fenêtre
+        new_window.geometry(f"{window_width}x{window_height}+{position_right}+{position_top}")
+
+        # Définit le titre de la fenêtre
+        new_window.title("Résultats")
+
+
+       # Création du bouton "Imprimer"
+        print_button = ttk.Button(new_window, text="Imprimer", command=lambda: self.export_to_pdf(cutting_plans), style="TButton")
         print_button.pack(side=tk.BOTTOM)
         print_button.pack(pady=(0, 10))
+
 
         # création du canevas avec la scrollbar
         canvas = tk.Canvas(new_window, width=780, height=650)
@@ -284,9 +389,13 @@ class OpticutUI(ttk.Frame):
         canvas.configure(yscrollcommand=scrollbar.set)
         canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion = canvas.bbox("all")))
 
+        # Associe l'événement de défilement de la souris au défilement du canevas
+        canvas.bind_all("<MouseWheel>", lambda event: canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
+
         # création du frame dans le canevas
         result_frame = tk.Frame(canvas)
         canvas.create_window((0,0), window=result_frame, anchor="n")
+
 
         return result_frame
 
